@@ -3,11 +3,6 @@
 > Proyecto educativo que compara **IA Simbólica tradicional** (Minimax con Backtracking) 
 > contra **Machine Learning supervisado** (Árboles de Decisión) usando arquitectura **MVC** en Python.
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.3+-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-completed-success.svg)
-
 ---
 
 ## 📖 Descripción
