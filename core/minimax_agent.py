@@ -25,7 +25,7 @@ class MinimaxAgent:
         self,
         ai_player: str = PLAYER_O,
         human_player: str = PLAYER_X,
-        max_depth: int | None = None,
+        difficulty: str = "dificil",
     ) -> None:
         """
         Args:
@@ -35,13 +35,46 @@ class MinimaxAgent:
         """
         self.ai_player: str = ai_player
         self.human_player: str = human_player
-        self.max_depth: int | None = max_depth
+        self.difficulty: str = difficulty
+        self.max_depth: int | None = None
         self.nodes_evaluated: int = 0  # Métrica educativa: nodos visitados
+
+    def set_difficulty(self, difficulty: str) -> None:
+        """Cambia el nivel de dificultad y ajusta la profundidad máxima."""
+        self.difficulty = difficulty
+        if difficulty == "facil":
+            self.max_depth = 0  # No explorará el árbol (movimientos aleatorios)
+        elif difficulty == "medio":
+            self.max_depth = 2  # Limita la profundidad a 2 jugadas
+        else:
+            self.max_depth = None  # Difícil: sin límite, árbol completo
 
     # ------------------------------------------------------------------
     # API pública
     # ------------------------------------------------------------------
-    def choose_move(self, board: GameModel) -> int:
+    def choose_move(self,board: GameModel) -> int:
+        """Devuelve el índice (0-8) de la mejor jugada para la IA.
+
+        Si varias jugadas valen lo mismo, elige una al azar (partidas más variadas).
+        El tablero queda EXACTAMENTE igual que antes de llamar al método.
+        """
+        if board.current_player != self.ai_player:
+            raise ValueError(f"No es el turno de la IA ({self.ai_player}).")
+        
+        moves = board.get_available_moves()
+        if not moves:
+            raise ValueError("No hay movimientos disponibles.")
+
+        self.nodes_evaluated = 0
+
+        # NIVEL FÁCIL: Movimiento totalmente aleatorio
+        if self.difficulty == "facil":
+            self.nodes_evaluated = 0
+            return random.choice(moves)
+        # NIVEL DICIFIL Y MEDIO
+        return random.choice(self.get_best_moves(board))
+    
+    def get_best_moves(self, board: GameModel) -> list[int]:
         """Devuelve el índice (0-8) de la mejor jugada para la IA.
 
         El tablero queda EXACTAMENTE igual que antes de llamar al método.
@@ -71,7 +104,7 @@ class MinimaxAgent:
                 best_moves.append(move)
 
         # Si varias jugadas valen lo mismo, elegimos una al azar (partidas más variadas)
-        return random.choice(best_moves)
+        return best_moves
 
     # ------------------------------------------------------------------
     # Algoritmo recursivo
