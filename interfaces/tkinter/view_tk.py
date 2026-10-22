@@ -79,6 +79,11 @@ class GUIView:
         self.mode_var: tk.StringVar | None = None   # Variable para el modo de juego seleccionado
         self.metric_labels: dict[str, tk.Label] = {}    # Labels para métricas de IA (nodes, time, accuracy)
 
+        # Callbacks y variables para dificultad
+        self.on_difficulty_change: callable[[str], None] | None = None
+        self.difficulty_var = tk.StringVar(value="dificil")
+        self.minimax_options_frame: tk.Frame | None = None
+
         self._build_ui()
         self._center_window()
 
@@ -104,7 +109,7 @@ class GUIView:
 
         subtitle = tk.Label(
             main_frame,
-            text="Minimax con backtracking  y  MachineLearning",
+            text="",
             font=FONT_SUBTITLE,
             bg=COLOR_BG,
             fg=COLOR_ACCENT,
@@ -167,6 +172,58 @@ class GUIView:
                 cursor="hand2",
             )
             rb.pack(anchor="w", pady=2)
+
+        # --- Separador ---
+        ttk.Separator(panel, orient="horizontal").pack(fill="x", pady=12)
+
+        # --- Contenedor exclusivo para opciones de Humano vs Minimax ---
+        self.minimax_options_frame = tk.Frame(panel, bg=COLOR_PANEL)
+        self.minimax_options_frame.pack(fill="x", pady=(4, 8))
+
+        tk.Label(
+            self.minimax_options_frame,
+            text="Dificultad IA:",
+            font=("Segoe UI", 9, "bold"),
+            bg=COLOR_PANEL,
+            fg=COLOR_TEXT,
+        ).pack(anchor="w", pady=(2, 2))
+
+        # Fila horizontal para los 3 botones de dificultad
+        diff_row = tk.Frame(self.minimax_options_frame, bg=COLOR_PANEL)
+        diff_row.pack(fill="x", pady=(0, 4))
+
+        difficulties = [("Fácil", "facil"), ("Medio", "medio"), ("Difícil", "dificil")]
+        for text_val, code_val in difficulties:
+            tk.Radiobutton(
+                diff_row,
+                text=text_val,
+                variable=self.difficulty_var,
+                value=code_val,
+                command=self._handle_difficulty_change,
+                indicatoron=False,  # Estilo de botón plano
+                font=("Segoe UI", 8, "bold"),
+                bg=COLOR_CELL,
+                fg=COLOR_TEXT,
+                selectcolor=COLOR_ACCENT,
+                padx=4,
+                pady=2,
+                cursor="hand2",
+            ).pack(side="left", expand=True, fill="x", padx=1)
+
+        # Botón de Ver Árbol debajo de los niveles de dificultad
+        tk.Button(
+            self.minimax_options_frame,
+            text=" Ver Árbol",
+            font=("Segoe UI", 9, "bold"),
+            bg=COLOR_CELL,
+            fg=COLOR_TEXT,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            padx=10,
+            pady=4,
+            command=lambda: messagebox.showinfo("desdsf", "jsdkfkj p"),
+        ).pack(fill="x", pady=(2, 0))
 
         # --- Separador ---
         ttk.Separator(panel, orient="horizontal").pack(fill="x", pady=12)
@@ -251,14 +308,6 @@ class GUIView:
         new_btn.pack(fill="x")
 
         # --- Footer ---
-        footer = tk.Label(
-            panel,
-            text="Aqui voy a poner los botones nivel ia",
-            font=("Segoe UI", 8),
-            bg=COLOR_PANEL,
-            fg="#888888",
-        )
-        footer.pack(side="bottom", pady=(16, 0))
 
     def _center_window(self) -> None:
         """Centra la ventana en la pantalla."""
@@ -349,6 +398,34 @@ class GUIView:
             if mode.value == mode_str:
                 return mode
         return GameMode.HUMAN_VS_MINIMAX
+
+    def set_selected_mode(self, mode: GameMode) -> None:
+        """Marca un modo en el selector (sin disparar el callback)."""
+        if self.mode_var:
+            self.mode_var.set(mode.value)
+
+    def show_error(self, title: str, message: str) -> None:
+        """Muestra un messagebox de error."""
+        messagebox.showerror(title, message)
+
+
+    # ------------dificulty------
+
+    def show_minimax_options(self, visible: bool) -> None:
+        """Muestra u oculta los controles de dificultad y árbol según el modo."""
+        if self.minimax_options_frame:
+            if visible:
+                self.minimax_options_frame.pack(fill="x", pady=(4, 8), after=self.status_label)
+            else:
+                self.minimax_options_frame.pack_forget()
+
+    def _handle_difficulty_change(self) -> None:
+        if self.on_difficulty_change and self.difficulty_var:
+            self.on_difficulty_change(self.difficulty_var.get())
+
+    def set_difficulty(self, diff: str) -> None:
+        if self.difficulty_var:
+            self.difficulty_var.set(diff)
 
     # --------------------------------------------------------
     # Ciclo de vida

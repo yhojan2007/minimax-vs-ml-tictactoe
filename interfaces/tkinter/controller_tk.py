@@ -1,6 +1,4 @@
 """
-controller/game_controller.py
-=============================
 Controlador que conecta Modelo ↔ Vista.
 
 Sincroniza eventos del usuario con el estado del juego
@@ -10,6 +8,7 @@ import time
 
 from core.game_model import GameModel, GameState, PLAYER_X, PLAYER_O
 from core.minimax_agent import MinimaxAgent
+from core.ml_agent import MLAgent
 from interfaces.tkinter.view_tk import GUIView, GameMode, COLOR_ACCENT
 
 class GameController:
@@ -23,14 +22,23 @@ class GameController:
         self.view = view
         self.model = GameModel()
         self.mode: GameMode = view.get_selected_mode()
-        self.agent = MinimaxAgent(self.AI_SYMBOL, self.HUMAN_SYMBOL)
+        self.minimax_agent = MinimaxAgent(self.AI_SYMBOL, self.HUMAN_SYMBOL)
+        self.ml_agent: MLAgent | None = None  # Se carga la primera vez que se elige el modo ML
+        self.agent = self.minimax_agent       # Agente activo según el modo
         self._ia_job: str | None = None # None =
 
         # Conectar callbacks
         self.view.on_cell_click = self.handle_cell_click
         self.view.on_mode_change = self.handle_mode_change
         self.view.on_reset = self.handle_reset
-        self.view.on_new_game = self.handle_reset  # CORREGIDO: Vincula el botón "Nuevo juego" al mismo reinicio
+        self.view.on_new_game = self.handle_reset  # Vincula el botón "Nuevo juego" al mismo reinicio
+
+        # Inicializar dificultad en difícil por defecto
+        self.difficulty: str = "dificil"
+        self.minimax_agent = MinimaxAgent(self.AI_SYMBOL, self.HUMAN_SYMBOL, difficulty=self.difficulty)
+        
+        # Conectar el callback de dificultad con el controlador
+        self.view.on_difficulty_change = self.handle_difficulty_change
 
         self._refresh_view()
 
@@ -62,7 +70,22 @@ class GameController:
 
     def handle_mode_change(self, mode: GameMode) -> None:
         """El usuario cambió el modo de juego."""
-        self.mode = mode  # CORREGIDO: Actualiza el modo activo en el controlador
+        # El modo ML necesita el modelo entrenado; si no existe, se vuelve al modo anterior
+        if mode == GameMode.HUMAN_VS_ML and not self._load_ml_agent():
+            self.view.set_selected_mode(self.mode)
+            return
+
+        self.mode = mode
+        self.agent = self.ml_agent if mode == GameMode.HUMAN_VS_ML else self.minimax_agent
+        
+        # Mostrar controles de Minimax solo si el modo es Humano vs Minimax
+        is_minimax = (mode == GameMode.HUMAN_VS_MINIMAX)
+        self.view.show_minimax_options(is_minimax)
+
+        if is_minimax:
+            # Por defecto en Difícil al cambiar a este modo
+            self.handle_difficulty_change("dificil")
+
         self.handle_reset()
         self.view.set_status(f"Modo: {mode.value}", "#cba6f7")
 
@@ -71,6 +94,7 @@ class GameController:
         self._cancel_ai_turn()
         self.model.reset()
         self.view.reset_metrics()
+        self._show_ml_accuracy()
         self._refresh_view()
 
     # --------------------------------------------------------
@@ -113,10 +137,31 @@ class GameController:
             self._ia_job = None
     
     def _vs_ai(self) -> bool:
-        """Devuelve True si el modo de juego activo es contra Minimax."""
-        # CORREGIDO: Se valida contra el enumerador correcto definido en la vista
-        return self.mode == GameMode.HUMAN_VS_MINIMAX
+        """Devuelve True si el modo de juego activo es contra una IA (Minimax o ML)."""
+        return self.mode in (GameMode.HUMAN_VS_MINIMAX, GameMode.HUMAN_VS_ML)
 
+    def _load_ml_agent(self) -> bool:
+        """Carga el modelo ML entrenado. Devuelve False si todavía no existe."""
+        if self.ml_agent is not None:
+            return True
+        try:
+            self.ml_agent = MLAgent.load()
+        except FileNotFoundError:
+            self.view.show_error("Modelo no encontrado")
+            return False
+        return True
+
+    def _show_ml_accuracy(self) -> None:
+        """En modo ML, muestra en el panel la precisión medida del modelo."""
+        if self.mode == GameMode.HUMAN_VS_ML and self.ml_agent and self.ml_agent.accuracy is not None:
+            self.view.set_metric("accuracy", f"{self.ml_agent.accuracy:.1%}")
+
+    def handle_difficulty_change(self, diff: str) -> None:
+        """Actualiza el nivel de dificultad en el agente Minimax."""
+        self.difficulty = diff
+        self.minimax_agent.set_difficulty(diff)
+        self.view.set_difficulty(diff)
+        self.handle_reset()
     # --------------------------------------------------------
     # Renderizado
     # --------------------------------------------------------
