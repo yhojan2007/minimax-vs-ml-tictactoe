@@ -104,8 +104,9 @@ class MLAgent:
 def _fit(data: pd.DataFrame) -> DecisionTreeClassifier:
     """Entrena un árbol: 9 casillas (entrada) -> jugada (salida)."""
     tree = DecisionTreeClassifier(random_state=42)
+    # Ensena a hasociar el tablero de 9 c con la jugada optima
     tree.fit(data[FEATURE_COLUMNS].to_numpy(), data[LABEL_COLUMN].to_numpy())
-    return tree
+    return tree     
 
 
 def measure_accuracy(agent: MLAgent, test_df: pd.DataFrame) -> float:
